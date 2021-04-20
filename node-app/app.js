@@ -7,7 +7,7 @@ const port = 3000
 const {Measurement,Event, Registry} = require('./resources/container.models')
 const containerRouter = require('./resources/container.router')
 const notificationRouter = require('./resources/notification.router')
-
+const apiRouter = require('./resources/api.router')
 
 // ========= MQTT ==============
 
@@ -19,6 +19,35 @@ const ENDPOINT = `mqtt://${IP}:${PORT}`;
 let subTopic=""
 let subTopics = ["gaz", "flame", "temp", "light","door"]
 let client = {}
+
+
+// === Reporting system parameterization ===
+let TIMERS = {
+
+}; // counter timer reference
+
+let TIMEFRAME = 20; // in seconds 
+let MAX_HITS = { // max allowed hits in a single timeframe
+  TEMP: 3
+}
+
+let HITS = { // registered hits in one timeframe
+  TEMP: 0,
+  FLAME: 0,
+}
+
+let THRESHOLDS = { // thresholds to register a HIT
+  TEMP: {
+    MIN: 10,
+    MAX: 50
+  },
+}
+
+// let TRIGGERS = {
+//   TEMP: 
+// }
+
+
 
 // connection options (optional)
 let options = {
@@ -56,41 +85,9 @@ Registry.find({}, {"_id": 0, "containerRef": 1}, (err, docs)=>{ // get container
   app.use(express.json())
   app.use('/container', containerRouter);
   app.use('/notification', notificationRouter);
+  app.use('/api', apiRouter);
 
 
-  // OLD TESTING SCENARIO
-  // console.log("UPDATING")
-  /*Measurement.updateOne(
-    {containerRef: '123'},
-    {$push: {"data.$.temp": [22]}},
-    (err, res)=> {
-      if (err) console.log(`Error: ${err}`);
-      console.log(`update result ${JSON.stringify(res)}`)
-    }
-  ).then(()=>{
-    // Webservice
-    app.get('/allContainers', (req, res) => {
-      Measurement.find({}, {"_id": 0, "containerRef": 1}, (err, docs)=>{
-        res.json(docs);
-      })
-      //res.send('Hello World!')
-    })
-
-    // Webservice
-    app.get('/measurements/:containerId', (req, res) => {
-      Measurement.findOne({"containerRef": req.params.containerId}, (err, docs)=>{
-        res.json(docs);
-      })
-      //res.send('Hello World!')
-    })
-
-    
-
-    app.listen(3000, "0.0.0.0", () => {
-      console.log(`Express app listening at http://0.0.0.0:${port}`)
-    })
-    
-  });*/
 
   
 
@@ -129,10 +126,14 @@ let setupMQTT = () => {
   // RECEIVE
   // console.log("receiving");
 
+  // || TO DOs: refactor this section using switch on sensor type
   client.on('message', (topic, message, packet) => { // save data to db depending on data type/containerRef
     // console.log(`[Received] Topic: ${topic}, Message:${message}, Packet:${packet}`);
     console.log(`[Received] Topic: ${topic}, Value:${message}`);
-    const contRef = topic.split('/')[0];
+    const [contRef, sensor] = topic.split('/')[0];
+
+    handleDataMonitoring(contRef, sensor, message);
+    
     // do a rigged container data update
     if(topic.includes("temp")) {
       Measurement.updateOne(
@@ -246,6 +247,33 @@ function setupSubscriptions (containersRefs) {
     })
   })
 
+}
+
+function handleDataMonitoring(container, data_type, payload){
+    const upperDataType = data_type.toUpperCase()
+    if(!isNormalSensorData(upperDataType, payload)) handleTimeframes(container, upperDataType, payload);
+}
+
+
+function isNormalSensorData(data_type, payload){
+  switch(data_type) {
+    case 'TEMP':
+      return payload > THRESHOLDS.TEMP.MIN && payload < THRESHOLDS.TEMP.MAX;
+    default:
+      // console.log(`[DATA PROCESSING] Unable to determine data_type:'${data_type} normalcy! please add its corresponding handler`)
+      return true;
+  }
+}
+
+function handleTimeframes(container, data_type, payload){
+  if(!TIMERS[data_type]) 'case1';
+  else if(TIMERS[data_type]._idleTimeout == -1) 'case3';
+  else 'case2';
+  /* cases for timer handling. NOTE: can use 'setInterval' inside a 'setTimeout' for more advanced parameterization
+  **  there is no timer registered -> first time app running
+  **  there is a running timer     -> register a hit (data is not normal) and check if reporting is required
+  **  there is a timedout timer (timer._idleTimeout == -1)     ->  start a new timer 'setTimeout'
+  */
 }
 
 // ======== EXPRESS ==========
