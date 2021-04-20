@@ -8,6 +8,8 @@ const {Measurement,Event, Registry} = require('./resources/container.models')
 const containerRouter = require('./resources/container.router')
 const notificationRouter = require('./resources/notification.router')
 const apiRouter = require('./resources/api.router')
+const {sendSMSMessage, sendEMail} = require('./resources/api')
+
 
 // ========= MQTT ==============
 
@@ -266,9 +268,16 @@ function isNormalSensorData(data_type, payload){
 }
 
 function handleTimeframes(container, data_type, payload){
-  if(!TIMERS[data_type]) 'case1';
-  else if(TIMERS[data_type]._idleTimeout == -1) 'case3';
-  else 'case2';
+  if(TIMERS[data_type] && TIMERS[data_type]._idleTimeout > -1) { // there is a running timer
+    // register hit
+    HITS[data_type] += 1;
+    applyRegisteredHits(container, data_type, payload);
+  }
+  else {  // there is no running timer
+    resetHits()
+    HITS[data_type] += 1;
+    resetTimer()
+  }
   /* cases for timer handling. NOTE: can use 'setInterval' inside a 'setTimeout' for more advanced parameterization
   **  there is no timer registered -> first time app running
   **  there is a running timer     -> register a hit (data is not normal) and check if reporting is required
@@ -276,6 +285,34 @@ function handleTimeframes(container, data_type, payload){
   */
 }
 
+
+function resetHits() {
+  HITS = {
+    TEMP: 0,
+    FLAME: 0 
+  }
+}
+
+function resetTimer(){
+  TIMERS[data_type] = startTimer();
+}
+
+function applyRegisteredHits(container, data_type, payload){
+  if(isSensorHitsMaxed) alertHitsMaxed(container, data_type, payload); 
+}
+
+function startTimer(){
+  return setTimeout(()=>{applyRegisteredHits()}, TIMEFRAME*1000);
+}
+
+ function alertHitsMaxed(container, data_type, payload){
+   sendMSMessage();
+   sendEMail();
+}
+
+function isSensorHitsMaxed(data_type) {
+  return HITS[data_type] >= MAX_HITS[data_type];
+}
 // ======== EXPRESS ==========
 
 

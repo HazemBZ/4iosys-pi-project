@@ -6,7 +6,7 @@ const OWNED_PHONE = process.env.TWILIO_OWNED_PHONE;
 const client = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 
-async function sendMessage (message, to){
+async function sendSMSMessage (message, to){
   let return_message = 'Not set yet';
   await client.messages.create({
     body: `"${message}"`,
@@ -17,7 +17,7 @@ async function sendMessage (message, to){
 }
 
 
-async function sendMail(){
+async function sendEMail(){
   // let testAccount = await nodemailer.createTestAccount();
   // console.log(`user ${testAccount.user}`)
   // console.log(`pass ${testAccount.pass}`)
@@ -44,4 +44,4 @@ async function sendMail(){
 
 
 
-module.exports = {sendMessage, sendMail}
+module.exports = {sendSMSMessage, sendEMail}
