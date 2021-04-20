@@ -28,9 +28,14 @@ let TIMERS = {
 
 }; // counter timer reference
 
+let firstAlert = {
+  TEMP: true,
+  FLAME: true
+}
+
 let TIMEFRAME = 20; // in seconds 
 let MAX_HITS = { // max allowed hits in a single timeframe
-  TEMP: 3
+  TEMPE: 3
 }
 
 let HITS = { // registered hits in one timeframe
@@ -132,9 +137,9 @@ let setupMQTT = () => {
   client.on('message', (topic, message, packet) => { // save data to db depending on data type/containerRef
     // console.log(`[Received] Topic: ${topic}, Message:${message}, Packet:${packet}`);
     console.log(`[Received] Topic: ${topic}, Value:${message}`);
-    const [contRef, sensor] = topic.split('/')[0];
+    const [contRef, sensor] = topic.split('/');
 
-    handleDataMonitoring(contRef, sensor, message);
+    handleDataMonitoring(contRef, sensor, parseInt(message));
     
     // do a rigged container data update
     if(topic.includes("temp")) {
@@ -252,31 +257,40 @@ function setupSubscriptions (containersRefs) {
 }
 
 function handleDataMonitoring(container, data_type, payload){
-    const upperDataType = data_type.toUpperCase()
-    if(!isNormalSensorData(upperDataType, payload)) handleTimeframes(container, upperDataType, payload);
+  console.log(`[STAGE] Data Monitoring Handler: container:${container}, datatype:${data_type}, paylaod:${payload}`)
+  const upperDataType= data_type.toUpperCase()
+  if(!isNormalSensorData(upperDataType, payload)){handleTimeframes(container, upperDataType, payload);console.log("NOT NORMAL");}
+  else console.log("IS NORMAL")
 }
 
 
 function isNormalSensorData(data_type, payload){
+  payload = parseInt(payload)
+  console.log(`checking ${data_type} normalcy`)
   switch(data_type) {
     case 'TEMP':
-      return payload > THRESHOLDS.TEMP.MIN && payload < THRESHOLDS.TEMP.MAX;
+      console.log(' case TEMP')
+      return (payload > THRESHOLDS.TEMP.MIN) && (payload < THRESHOLDS.TEMP.MAX);
     default:
       // console.log(`[DATA PROCESSING] Unable to determine data_type:'${data_type} normalcy! please add its corresponding handler`)
       return true;
   }
 }
 
+// handle TIMERS 
 function handleTimeframes(container, data_type, payload){
-  if(TIMERS[data_type] && TIMERS[data_type]._idleTimeout > -1) { // there is a running timer
+  console.log(`[STAGE] time frames handlerma`)
+  if(TIMERS[data_type] && TIMERS[data_type]._idlePrev && TIMERS[data_type]._idleNext) { // _idleTimeout: for setInterval //// there is a running timer
+    console.log(`TIMER exists for ${data_type} data`)
     // register hit
     HITS[data_type] += 1;
-    applyRegisteredHits(container, data_type, payload);
+    // if(firstAlert[data_type]) applyRegisteredHits(container, data_type, payload); firstAlert[data_type]= false;
   }
   else {  // there is no running timer
-    resetHits()
+    console.log(`starting TIMER for ${data_type} data`)
+    resetHits(container, data_type)
     HITS[data_type] += 1;
-    resetTimer()
+    resetTimer(container, data_type, payload)
   }
   /* cases for timer handling. NOTE: can use 'setInterval' inside a 'setTimeout' for more advanced parameterization
   **  there is no timer registered -> first time app running
@@ -286,28 +300,29 @@ function handleTimeframes(container, data_type, payload){
 }
 
 
-function resetHits() {
-  HITS = {
-    TEMP: 0,
-    FLAME: 0 
-  }
+function resetHits(container, data_type) {
+  HITS[data_type] = 0;
 }
 
-function resetTimer(){
-  TIMERS[data_type] = startTimer();
+function resetTimer(container, data_type, payload){
+  TIMERS[data_type] = startTimer(container, data_type, payload);
 }
 
 function applyRegisteredHits(container, data_type, payload){
-  if(isSensorHitsMaxed) alertHitsMaxed(container, data_type, payload); 
+  if(isSensorHitsMaxed) alertHitsMaxed(container, data_type, payload);firstAlert[data_type] = true;
 }
 
-function startTimer(){
-  return setTimeout(()=>{applyRegisteredHits()}, TIMEFRAME*1000);
+function startTimer(container, data_type, payload){
+  let subFrameTimer = setInterval(()=>{console.log(`current HITS ${JSON.stringify(HITS)}`)}, TIMEFRAME*1000 / 5)
+  console.log(`[TIMER] Started for ${data_type} data`)
+  function timerFunction(){applyRegisteredHits(container, data_type, payload); clearInterval(subFrameTimer); console.log(`[TIMER] Ended for ${data_type} data`)}
+  return setTimeout(timerFunction, TIMEFRAME*1000);
 }
 
  function alertHitsMaxed(container, data_type, payload){
-   sendMSMessage();
-   sendEMail();
+   console.log(`$[ALERT] hits maxed for '${data_type} data'`)
+  //  sendSMSMessage();
+  //  sendEMail();
 }
 
 function isSensorHitsMaxed(data_type) {

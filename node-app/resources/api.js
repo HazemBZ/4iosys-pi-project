@@ -6,7 +6,7 @@ const OWNED_PHONE = process.env.TWILIO_OWNED_PHONE;
 const client = require('twilio')(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 
-async function sendSMSMessage (message, to){
+async function sendSMSMessage (message="test message unset", to="+21622409396"){
   let return_message = 'Not set yet';
   await client.messages.create({
     body: `"${message}"`,

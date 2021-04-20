@@ -2,7 +2,7 @@ const {sendSMSMessage, sendEMail} = require('./api');
 const router = require('express').Router();
 
 router.get('/sms', (req, resp) => {
-    sendSMSMessage('Sup world', '+21622409396').then((message)=> resp.json(message))
+    sendSMSMessage('Sup world').then((message)=> resp.json(message))
 });
 
 router.get('/mail', (req, resp) => {
