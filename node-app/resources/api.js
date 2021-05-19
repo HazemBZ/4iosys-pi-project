@@ -33,8 +33,8 @@ async function sendEMail(){
     from: '"SmartBakou Dashboard 👻" <wild@walid.com>', // sender address
     to: process.env.RECEIVER_EMAIL_ADDRESS, //"dude1@gmail.com, dudette1@gmail.com", // list of receivers
     subject: "ALERT: Threshold exceeded", // Subject line
-    text: "Hello world?", // plain text body
-    html: "<b>Hello world?</b>", // html body
+    text: "TEMP Threshold exceeded", // plain text body
+    html: "<b>TEMP Threshold exceeded</b>", // html body
 
   })
 

@@ -68,8 +68,9 @@ router.post('/registry/add', (req, res)=> {
   console.log("Received request")
   const containerRef = req.body.containerRef; // required
   const owner = req.body.owner; // required
-  const location ="None" ;
-  const destination = "None";
+  const source = req.body.source;
+  const location = req.body.location ;
+  const destination = req.body.destination;
   const status = "None";
   const last_active = "None";
   const pinned = false;
@@ -80,6 +81,7 @@ router.post('/registry/add', (req, res)=> {
   const registry = new Registry({
     containerRef: containerRef,
     owner: owner,
+    source: source,
     location: location,
     destination: destination,
     status: status,

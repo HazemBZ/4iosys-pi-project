@@ -321,8 +321,8 @@ function startTimer(container, data_type, payload){
 
  function alertHitsMaxed(container, data_type, payload){
    console.log(`$[ALERT] hits maxed for '${data_type} data'`)
-  //  sendSMSMessage();
-  //  sendEMail();
+   sendSMSMessage(`[ALERT] threshold hit count exceeded for ${data_type.toUpperCase()} data`);
+   sendEMail();
 }
 
 function isSensorHitsMaxed(data_type) {

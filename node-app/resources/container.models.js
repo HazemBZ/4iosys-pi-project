@@ -33,6 +33,7 @@ const eventSchema = new mongoose.Schema({
 const regitrySchema = new mongoose.Schema({
   containerRef: {type:String, index: {unique:true, required:true, dropDups:true}},
   owner: {type:String, required:true},
+  source: String,
   location: String,
   destination: String,
   status: String, // for the moment string, change to number later when a status_code table is established
@@ -47,6 +48,7 @@ const regitrySchema = new mongoose.Schema({
 const notificationSchema = new mongoose.Schema({
   object:String,
   content:String,
+  time: String
 })
 
 //======== Models
